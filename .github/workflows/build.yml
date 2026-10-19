@@ -12,7 +12,7 @@ jobs:
   build:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install XcodeGen
         run: brew install xcodegen
@@ -22,6 +22,7 @@ jobs:
 
       - name: Build (unsigned — SideStore signs it on the iPad)
         run: |
+          set -o pipefail
           xcodebuild \
             -project PdfCraftPad.xcodeproj \
             -target PdfCraftPad \
@@ -31,7 +32,10 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build
+            build 2>&1 | tee build.log || {
+              grep -E "error:" build.log | sort -u | head -40 | sed 's/^/::error::/'
+              exit 1
+            }
 
       - name: Package .ipa
         run: |
@@ -39,7 +43,7 @@ jobs:
           cp -R build/Release-iphoneos/PdfCraftPad.app Payload/
           zip -qry PdfCraftPad.ipa Payload
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: PdfCraftPad-ipa
           path: PdfCraftPad.ipa
