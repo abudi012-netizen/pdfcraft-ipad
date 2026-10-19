@@ -26,7 +26,8 @@ enum SearchEngine {
 
                 var snippet = query
                 if let context = selection.copy() as? PDFSelection {
-                    context.extend(atStart: 60, atEnd: 80)
+                    context.extend(atStart: 60)
+                    context.extend(atEnd: 80)
                     snippet = (context.string ?? query)
                         .components(separatedBy: .whitespacesAndNewlines)
                         .filter { !$0.isEmpty }
