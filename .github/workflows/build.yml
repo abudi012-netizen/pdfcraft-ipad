@@ -1,0 +1,55 @@
+name: Build iPad app
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (unsigned — SideStore signs it on the iPad)
+        run: |
+          xcodebuild \
+            -project PdfCraftPad.xcodeproj \
+            -target PdfCraftPad \
+            -configuration Release \
+            -sdk iphoneos \
+            SYMROOT="$PWD/build" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package .ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/Release-iphoneos/PdfCraftPad.app Payload/
+          zip -qry PdfCraftPad.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PdfCraftPad-ipa
+          path: PdfCraftPad.ipa
+
+      - name: Publish as the "latest" release (easy to download from the iPad)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest PdfCraftPad.ipa \
+            --title "PdfCraft Pad — build ${{ github.run_number }}" \
+            --notes "Download PdfCraftPad.ipa on your iPad, then open it in SideStore." \
+            --prerelease
