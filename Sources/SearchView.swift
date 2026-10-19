@@ -50,20 +50,20 @@ struct SearchView: View {
     @State private var hits: [SearchHit] = []
     @State private var searching = false
 
-    private struct Group: Identifiable {
+    private struct HitGroup: Identifiable {
         let item: LibraryItem
         let hits: [SearchHit]
         var id: URL { item.url }
     }
 
-    private var groups: [Group] {
+    private var groups: [HitGroup] {
         var order: [LibraryItem] = []
         var byItem: [LibraryItem: [SearchHit]] = [:]
         for hit in hits {
             if byItem[hit.item] == nil { order.append(hit.item) }
             byItem[hit.item, default: []].append(hit)
         }
-        return order.map { Group(item: $0, hits: byItem[$0] ?? []) }
+        return order.map { HitGroup(item: $0, hits: byItem[$0] ?? []) }
     }
 
     var body: some View {
