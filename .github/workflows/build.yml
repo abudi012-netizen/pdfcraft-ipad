@@ -14,6 +14,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Cache medical dictionary
+        id: meddict
+        uses: actions/cache@v4
+        with:
+          path: Sources/MedDict.sqlite
+          key: meddict-mesh2026-${{ hashFiles('tools/build_meddict.py') }}
+
+      - name: Build medical dictionary from NLM MeSH
+        if: steps.meddict.outputs.cache-hit != 'true'
+        run: |
+          base=https://nlmpubs.nlm.nih.gov/projects/mesh/MESH_FILES/xmlmesh
+          curl -fsSL --retry 3 -o desc.gz "$base/desc2026.gz"
+          curl -fsSL --retry 3 -o supp.gz "$base/supp2026.gz"
+          python3 tools/build_meddict.py desc.gz supp.gz Sources/MedDict.sqlite
+          ls -lh Sources/MedDict.sqlite
+
       - name: Install XcodeGen
         run: brew install xcodegen
 

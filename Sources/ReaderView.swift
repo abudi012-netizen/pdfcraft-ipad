@@ -29,6 +29,10 @@ struct ReaderView: View {
                         Label("Find in PDF", systemImage: "magnifyingglass")
                     }
 
+                    Button { controller.defineSelection() } label: {
+                        Label("Medical Dictionary", systemImage: "cross.case")
+                    }
+
                     Button { controller.darkPages.toggle() } label: {
                         Label("Night reading", systemImage: controller.darkPages ? "moon.fill" : "moon")
                     }
@@ -42,6 +46,9 @@ struct ReaderView: View {
             }
             .onAppear { controller.didAppear(target: target) }
             .onDisappear { controller.saveNow() }
+            .sheet(item: $controller.dictionaryRequest) { request in
+                DictionaryView(query: request.query)
+            }
             .sheet(isPresented: $showFind) {
                 SearchView(title: "Find in \(item.title)", items: [item]) { _, target in
                     showFind = false

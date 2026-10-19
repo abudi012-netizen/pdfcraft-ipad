@@ -18,6 +18,30 @@ final class InvertiblePage: PDFPage {
     }
 }
 
+/// PDFView that adds "Medical Dictionary" to the menu shown for selected text.
+final class StudyPDFView: PDFView {
+    var onDefine: ((String) -> Void)?
+
+    var selectedText: String? {
+        let text = currentSelection?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return text.isEmpty || text.count > 80 ? nil : text
+    }
+
+    override func buildMenu(with builder: UIMenuBuilder) {
+        super.buildMenu(with: builder)
+        guard builder.system == .context, let text = selectedText else { return }
+        let action = UIAction(title: "Medical Dictionary", image: UIImage(systemName: "cross.case")) { [weak self] _ in
+            self?.onDefine?(text)
+        }
+        let menu = UIMenu(options: .displayInline, children: [action])
+        if builder.menu(for: .lookup) != nil {
+            builder.insertChild(menu, atStartOfMenu: .lookup)
+        } else {
+            builder.insertChild(menu, atStartOfMenu: .root)
+        }
+    }
+}
+
 /// Transparent layer over each page holding that page's Pencil canvas.
 final class PageOverlayView: UIView {
     let canvas = PKCanvasView()
@@ -45,7 +69,7 @@ final class ReaderController: NSObject, ObservableObject {
     static func lastPageKey(for url: URL) -> String { "lastPage.\(url.lastPathComponent)" }
 
     let url: URL
-    let pdfView = PDFView()
+    let pdfView = StudyPDFView()
     let toolPicker = PKToolPicker()
 
     @Published var drawingEnabled = false {
@@ -58,6 +82,7 @@ final class ReaderController: NSObject, ObservableObject {
         }
     }
     @Published private(set) var pageLabel = ""
+    @Published var dictionaryRequest: DictionaryRequest?
 
     private var drawings: [Int: PKDrawing]
     private var overlays: [Int: PageOverlayView] = [:]
@@ -71,6 +96,9 @@ final class ReaderController: NSObject, ObservableObject {
         super.init()
 
         pdfView.pageOverlayViewProvider = self
+        pdfView.onDefine = { [weak self] text in
+            self?.dictionaryRequest = DictionaryRequest(query: text)
+        }
         pdfView.autoScales = true
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
@@ -113,6 +141,11 @@ final class ReaderController: NSObject, ObservableObject {
                 }
             }
         }
+    }
+
+    /// Opens the dictionary for the selected word (or empty if nothing is selected).
+    func defineSelection() {
+        dictionaryRequest = DictionaryRequest(query: pdfView.selectedText ?? "")
     }
 
     func go(to target: ReaderTarget) {

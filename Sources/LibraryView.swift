@@ -7,6 +7,7 @@ struct LibraryView: View {
     @AppStorage("appearance") private var appearance = 0
     @State private var importing = false
     @State private var showSearch = false
+    @State private var showDictionary = false
     @State private var pendingDelete: LibraryItem?
     @State private var filter = ""
 
@@ -26,6 +27,10 @@ struct LibraryView: View {
                     }
                     .disabled(library.items.isEmpty)
 
+                    Button { showDictionary = true } label: {
+                        Label("Medical Dictionary", systemImage: "cross.case")
+                    }
+
                     Button { importing = true } label: {
                         Label("Import PDFs", systemImage: "plus")
                     }
@@ -44,6 +49,7 @@ struct LibraryView: View {
             .fileImporter(isPresented: $importing, allowedContentTypes: [.pdf], allowsMultipleSelection: true) { result in
                 if case .success(let urls) = result { library.importFiles(urls) }
             }
+            .sheet(isPresented: $showDictionary) { DictionaryView() }
             .sheet(isPresented: $showSearch) {
                 SearchView(title: "Search all PDFs", items: library.items) { item, target in
                     showSearch = false
